@@ -470,6 +470,9 @@ function drillCity(idx){
     } else if (c.supply_watch) {
       a2 = "UH% exceeded 7% for <strong>"+c.uh_consec+" consecutive weeks</strong> but GOV lost not yet trending up (avg "+fPa(c.gov_avg_l8)+" vs indicator "+fPa(govInd2)+"). Watch closely.";
       v2c="warn"; v2lbl="UH elevated — watch";
+    } else if (c.supply_recurring && c.avg_over > 30 && c.avg_tar !== null && c.avg_tar < 0.70) {
+      a2 = "UH% recurring above 7% for "+c.uh_consec+" consecutive weeks but oversupply is high ("+fPa(c.avg_over)+") and TAR is low ("+c.avg_tar.toFixed(2)+"). <strong>Couriers exist but are not engaging when needed</strong> — this is a scheduling or activation problem, not a headcount problem. Explore other actions to improve courier engagement during demand peaks before considering new onboarding.";
+      v2c="warn"; v2lbl="Supply — activation";
     } else {
       a2 = "No recurring supply issue. GOV lost avg "+fPa(c.gov_avg_l8)+" vs "+c.country+" indicator "+fPa(govInd2)+". Within acceptable range.";
       v2c="ok"; v2lbl="Supply OK";
@@ -477,17 +480,39 @@ function drillCity(idx){
     layers.push({q:"Is supply the bottleneck?",a:a2,v:v2lbl,vc:"lv-"+v2c,lc:v2c});
 
     const growthWeak = gPct === null || gPct < 5;
-    const a3=overH&&!govH&&!growthWeak
-      ?"Oversupply at "+fPa(c.avg_over)+" but city is growing "+fP(gPct)+" L8CW. Couriers are waiting in some hours but the market is expanding — this reflects fleet sizing, not a demand ceiling."
-      :overH&&!govH&&growthWeak
-      ?"Oversupply at "+fPa(c.avg_over)+" — couriers waiting with nothing to pick up. "+(c.avg_venues?"City has "+Math.round(c.avg_venues)+" venues at "+fN(c.avg_opv,1)+" orders/venue/week. ":"")+(c.avg_opv&&c.avg_opv<8?"Low venue productivity points to merchant-side or market ceiling issue.":"Check if venue count trend is declining.")
-      :c.avg_opv&&c.avg_opv<8&&!govH
-      ?"Venue productivity is low at "+fN(c.avg_opv,1)+" orders/venue/week across "+Math.round(c.avg_venues||0)+" venues. Growth ceiling may be on merchant side."
-      :govH
-      ?"Demand may exist but supply is blocking it — GOV lost of "+fPa(c.avg_gov)+" indicates unmet orders."
-      :"Demand looks adequate — "+Math.round(c.avg_venues||0)+" venues at "+fN(c.avg_opv,1)+" orders/venue/week.";
-    const v3c = overH&&!govH&&growthWeak?"bad":overH&&!govH&&!growthWeak?"ok":c.avg_opv&&c.avg_opv<8&&!govH?"warn":govH?"warn":"ok";
-    const v3lbl = overH&&!govH&&growthWeak?"Demand ceiling":overH&&!govH&&!growthWeak?"Fleet sizing":c.avg_opv&&c.avg_opv<8&&!govH?"Venue issue":govH?"Latent demand":"OK";
+    const govInd3 = govIndicator(c.country);
+    const peakIssue = c.avg_over > 30 && !growthWeak && c.gov_avg_l8 > govInd3 && c.supply_recurring;
+    const venuesDeclining = c.venue_yoy_pct!==null && c.venue_yoy_pct<-5;
+    const opvDeclining = c.opv_yoy!==null && c.opv_yoy<-10;
+    const opvLow = c.avg_opv!==null && c.avg_opv<8;
+    let a3, v3c, v3lbl;
+    if (c.avg_over > 30 && !govH && !growthWeak && peakIssue) {
+      a3 = "Oversupply at "+fPa(c.avg_over)+" overall, but GOV lost ("+fPa(c.gov_avg_l8)+") is above the "+c.country+" indicator ("+fPa(govInd3)+") and UH% has been recurring. Couriers are idle in off-peak hours but orders are still being missed at peak times — this points to a <strong>peak-time activation gap</strong>. Explore other actions to improve courier engagement during demand peaks before considering new onboarding.";
+      v3c="warn"; v3lbl="Courier surplus + peak gap";
+    } else if (c.avg_over > 30 && !govH && !growthWeak) {
+      a3 = "Oversupply at "+fPa(c.avg_over)+" and GOV lost ("+fPa(c.gov_avg_l8)+") is within the "+c.country+" indicator ("+fPa(govInd3)+"). Couriers are waiting with nothing to pick up — the fleet grew ahead of demand. No action needed on supply side.";
+      v3c="ok"; v3lbl="Courier surplus";
+    } else if (c.avg_over > 30 && !govH && growthWeak) {
+      a3 = "Oversupply at "+fPa(c.avg_over)+" with flat/declining orders. Couriers waiting with nothing to pick up. "+Math.round(c.avg_venues||0)+" venues at "+fN(c.avg_opv,1)+" orders/venue/week"+(c.venue_yoy_pct!==null?" ("+fP(c.venue_yoy_pct,0)+" YoY)":"")+"."
+      v3c="bad"; v3lbl="Demand ceiling";
+    } else if (venuesDeclining) {
+      const vAbs = c.venue_yoy_abs!==null?" ("+Math.round(c.venue_cur)+" now vs "+Math.round(c.venue_py)+" last year)":"";
+      a3 = "Active venues declined <strong>"+fP(c.venue_yoy_pct)+"</strong> YoY"+vAbs+". Fewer venues means less order generation regardless of supply. This is a <strong>merchant-side issue</strong> — escalate to commercial team, not courier onboarding.";
+      v3c="bad"; v3lbl="Venues declining";
+    } else if (opvDeclining && !venuesDeclining) {
+      a3 = "Venue count is stable ("+Math.round(c.venue_cur||0)+" venues, "+fP(c.venue_yoy_pct)+" YoY) but orders-per-venue dropped <strong>"+fP(c.opv_yoy)+"</strong>. Existing venues are generating fewer orders.";
+      v3c="warn"; v3lbl="Venue productivity down";
+    } else if (opvLow && !govH) {
+      a3 = "Venue productivity is low at <strong>"+fN(c.avg_opv,1)+" orders/venue/week</strong> across "+Math.round(c.avg_venues||0)+" venues. Market ceiling may be structural.";
+      v3c="warn"; v3lbl="Low venue productivity";
+    } else if (govH) {
+      a3 = "Demand may exist but supply is blocking it — GOV lost of "+fPa(c.avg_gov)+" indicates unmet orders. "+Math.round(c.avg_venues||0)+" venues at "+fN(c.avg_opv,1)+"/wk.";
+      v3c="warn"; v3lbl="Latent demand";
+    } else {
+      const venueStr = c.venue_yoy_pct!==null?" Venues "+fP(c.venue_yoy_pct)+" YoY ("+Math.round(c.venue_cur||0)+" active).":"";
+      a3 = "Demand looks adequate."+venueStr+" "+Math.round(c.avg_venues||0)+" venues at "+fN(c.avg_opv,1)+" orders/venue/week.";
+      v3c="ok"; v3lbl="OK";
+    }
     layers.push({q:"Demand / venue side?",a:a3,v:v3lbl,vc:"lv-"+v3c,lc:v3c});
   }
 
