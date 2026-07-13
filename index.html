@@ -227,7 +227,6 @@ body{background:var(--ink);color:var(--txt);font-family:var(--sans);font-size:13
       </div>
       <div class="size-ctx" id="d-size"></div>
       <div class="diag"><div class="diag-title">Three diagnostic questions</div><div class="layers" id="d-layers"></div></div>
-      <div class="edu" id="d-edu"></div>
       <div class="ksec"><div class="ksec-title">Growth signal</div><div class="kgrid" id="kg-growth"></div></div>
       <div class="ksec"><div class="ksec-title">Supply health</div><div class="kgrid" id="kg-supply"></div></div>
       <div class="ksec"><div class="ksec-title">Demand &amp; venues</div><div class="kgrid" id="kg-demand"></div></div>
@@ -555,17 +554,8 @@ function drillCity(idx){
   ).join("");
 
   // Edu
-  const eduMap={
-    supply:{lbl:"What GOV Lost means for your role",txt:"GOV Lost % is the share of potential order value Wolt could not capture because no courier was available. When high, customers tried to order but we had no courier. That is where onboarding directly unblocks growth. When low, adding couriers will not generate more orders."},
-    demand:{lbl:"What Oversupply means",txt:"Oversupply Ratio is the % of time active couriers had nothing to do. High oversupply means you have more couriers than the market needs. Onboarding more couriers will not grow orders here. The ceiling is demand — escalate to commercial or marketing."},
-    healthy:{lbl:"Why both % and absolute numbers matter",txt:"A city growing 20% sounds great until you see it added only 15 orders/week absolute. For cities below 200 orders/week, percentage growth is unreliable as a standalone metric. Use absolute orders added as the primary signal for small cities."},
-    watch:{lbl:"Why this city is in Watch",txt:"Mixed signals — not clearly supply-constrained, not clearly demand-limited. Watch cities need more data. Check whether flat growth is seasonal, whether venue count is stable, and whether GOV Lost is trending up or down."},
-    partial:{lbl:"What Trend Only means",txt:"This city launched after Q1 2025, so a true year-on-year comparison is not possible yet. The growth signal is based on the most recent 6 weeks vs 6 weeks from 3 months ago. This shows direction but has lower confidence than a full YoY comparison. Treat classifications here as indicative."},
-    early:{lbl:"How to handle early stage cities",txt:"Less than 13 weeks (one quarter) of data makes any classification unreliable. GOV Lost often looks elevated in the first weeks as the courier fleet ramps. Watch orders-per-venue after 8 weeks — if it stays below 8 after 12 weeks, question whether the market size justifies continued investment."},
-    event:{lbl:"Event and pop-up locations",txt:"These are temporary activations, not permanent city markets. Standard supply/demand diagnostic thresholds do not apply. They require a different assessment framework based on event-specific KPIs."},
-  };
-  const edu=eduMap[v]||eduMap.watch;
-  document.getElementById("d-edu").innerHTML="<div class='edu-lbl'>"+edu.lbl+"</div><div class='edu-txt'>"+edu.txt+"</div>";
+
+
 
   // KPIs
   const growthValDisplay=gPct!==null?fP(gPct):(c.data_tier==="early"?"Too early":"--");
